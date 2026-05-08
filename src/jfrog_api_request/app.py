@@ -189,9 +189,7 @@ class App:
             ret.append("--ssl-no-revoke")
         ret += [
             "--user",
-            self.processed_url.username,
-            "--pass",
-            "",
+            f"{self.processed_url.username}:",
             "--user-agent",
             _USER_AGENT,
             "--styled-output",
@@ -207,7 +205,7 @@ class App:
             'header = "Authorization: Bearer '
             f'{self.processed_url.token}"'
         )
-        return ret, stdin
+        return ret, stdin + "\n"
 
     @property
     def query_result(self) -> object:

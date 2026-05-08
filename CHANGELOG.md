@@ -1,10 +1,10 @@
 Changelog
 =========
 
-0.1.0
+0.2.1
 -----
 
-- Initial revision
+- Fixed bug in curl invocation. (see #7)
 
 0.2.0
 -----
@@ -13,3 +13,9 @@ Changelog
 - Added options to provide curl binary path and pip config file via the
   command line. If both are provided, less restrictions applies versus the
   supported operating systems. (see #5)
+
+0.1.0
+-----
+
+- Initial revision
+

@@ -80,8 +80,11 @@ class UrlProcessor:
     @property
     def url_no_credentials(self) -> str:
         """Return the URL without username, password, token."""
+        netloc = self.hostname
+        if self.port is not None:
+            netloc = f"{netloc}:{self.port}"
         return self._get_new_with_changed_fields(
-            username="", password=""
+            username="", password="", netloc=netloc
         ).url
 
     @functools.cached_property

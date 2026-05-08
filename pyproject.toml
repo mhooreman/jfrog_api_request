@@ -1,6 +1,6 @@
 [project]
 name = "jfrog-api-request"
-version = "0.1.0"
+version = "0.2.0"
 description = "Command line tool to run a JFrog API request"
 readme = "README.md"
 authors = [

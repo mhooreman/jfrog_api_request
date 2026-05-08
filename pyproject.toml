@@ -160,7 +160,7 @@ show_error_end = true
 show_error_code_links = true
 pretty = true
 mypy_path = "$MYPY_CONFIG_FILE_DIR/src $MYPY_CONFIG_FILE_DIR/tests"
-packages = ["qadt", "tests", "devtool"]
+packages = ["jfrog_api_request", "tests"]
 
 [tool.pytest.ini_options]
 console_output_style = "classic"

@@ -7,78 +7,29 @@ So it means that we can't rely on JFrog, and ONLY vanilla python can be used,
 hence the use of curl as a backend.
 """
 
-import argparse
 import configparser
 import dataclasses
 import functools
 import logging
-import os
 import pathlib
-import platform
 import pprint
 import sys
 import typing
 
+from . import cli, osutils
 from .exceptions import (
-    AppDataNotSetError,
-    CurlNotFoundError,
     MissingPipConfigFileOptionError,
     MissingPipConfigFileSectionError,
-    PipConfigFileNotFoundError,
     RunHasNoError,
-    SystemRootNotSetError,
     TAnyProcessingError,
-    UnsupportedOperatingSystemError,
 )
 from .processors import CurlCommandProcessor, UrlProcessor
 
-__version__: typing.Final[str] = "1.0.0"
-DESCRIPTION: typing.Final[str] = (
-    "Run a JFrog API query and print the result as evaluable python "
-    "code (or text if not possible). JFrog URL and credentials are "
-    "read from system PIP configuration."
-)
-_DEFAULT_ENTRYPOINT: typing.Final[str] = "/pypi/pypi/simple/"
 _USER_AGENT: typing.Final[str] = (
     # This is the user agent of Microsoft Edge 142.0.3595.90
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0"
 )
-
-
-def _get_pip_configured_jfrog_url() -> str:
-    """Return the JFrog URL configured in pip.
-
-    :raises AppDataNotSetError: The APPDATA environment variable is not set
-    :raises PipConfigFileNotFoundError: The PIP configuration file cannot be
-        found
-    :raises MissingPipConfigFileSectionError: A section is missing in the PIP
-        configuration file
-    :raises MissingPipConfigFileOptionError: An option is missing in the PIP
-        configuration file, while the corresponding section exists
-    :return: The URL, as provided in the configuration (e.g. not parsed)
-    """
-    parser = configparser.ConfigParser()
-    section = "global"
-    option = "index-url"
-    try:
-        appdata = os.environ["APPDATA"]
-    except KeyError as e:
-        raise AppDataNotSetError from e
-    pip_config_path = pathlib.Path(appdata) / "pip" / "pip.ini"
-    if not pip_config_path.exists():
-        raise PipConfigFileNotFoundError(pip_config_path)
-
-    with pip_config_path.open("r") as fp:
-        parser.read_file(fp)
-    try:
-        ret = parser.get(section, option)
-    except configparser.NoSectionError as e:
-        raise MissingPipConfigFileSectionError(section) from e
-    except configparser.NoOptionError as e:
-        raise MissingPipConfigFileOptionError(section, option) from e
-
-    return ret
 
 
 @dataclasses.dataclass(kw_only=True, frozen=True)
@@ -92,6 +43,8 @@ class App:
     verbose: bool
     quiet: bool
     ssl: bool
+    provided_pip_config_path: pathlib.Path | None
+    provided_curl_path: pathlib.Path | None
 
     @functools.cached_property
     def logger(self) -> logging.Logger:
@@ -122,22 +75,50 @@ class App:
         return ret
 
     @property
+    def _pip_configured_jfrog_url(self) -> str:
+        """Return the JFrog URL configured in pip.
+
+        :raises AppDataNotSetError: The APPDATA environment variable is not
+            set
+        :raises PipConfigFileNotFoundError: The PIP configuration file cannot
+            be found
+        :raises MissingPipConfigFileSectionError: A section is missing in the
+            PIP configuration file
+        :raises MissingPipConfigFileOptionError: An option is missing in the
+            PIP configuration file, while the corresponding section exists
+        :return: The URL, as provided in the configuration (e.g. not parsed)
+        """
+        parser = configparser.ConfigParser()
+        section = "global"
+        option = "index-url"
+        pip_config_path = self.provided_pip_config_path
+        if pip_config_path is None:
+            pip_config_path = osutils.get_pip_config_path()
+        self.logger.info("Reading JFrog URL from %s", pip_config_path)
+        with pip_config_path.open("r") as fp:
+            parser.read_file(fp)
+        try:
+            ret = parser.get(section, option)
+        except configparser.NoSectionError as e:
+            raise MissingPipConfigFileSectionError(section) from e
+        except configparser.NoOptionError as e:
+            raise MissingPipConfigFileOptionError(section, option) from e
+        return ret
+
+    @property
     def _curl_path(self) -> pathlib.Path:
         """Provide the curl application path.
 
         :raises SystemRootNotSetError:
-            The ``SYSTEMROOT`` environment variable is not set
+            The ``SYSTEMROOT`` environment variable is not set (on Windows)
         :raises CurlNotFoundError: _description_
             The computed path does not exists
         :return: The computed path
         """
-        try:
-            sysroot = os.environ["SYSTEMROOT"]
-        except KeyError as e:
-            raise SystemRootNotSetError from e
-        ret = pathlib.Path(sysroot) / "system32" / "curl.exe"
-        if not ret.exists():
-            raise CurlNotFoundError(ret)
+        ret = self.provided_curl_path
+        if ret is None:
+            ret = osutils.get_curl_path()
+        self.logger.info("Found curl in %s", ret)
         return ret
 
     @staticmethod
@@ -172,7 +153,7 @@ class App:
     def processed_url(self) -> UrlProcessor:
         """Provide the processed target URL."""
         ret = UrlProcessor.from_url(
-            _get_pip_configured_jfrog_url()
+            self._pip_configured_jfrog_url
         ).get_new_updated_apicall(
             self.apicall
         )
@@ -209,8 +190,7 @@ class App:
         ret += [
             "--user",
             self.processed_url.username,
-            "--password",
-            # Giving empty password otherwize curl wait for additional input
+            "--pass",
             "",
             "--user-agent",
             _USER_AGENT,
@@ -254,8 +234,6 @@ class App:
         This is called from `self.main`.
         """
         try:
-            if platform.system() != "Windows":
-                raise UnsupportedOperatingSystemError
             res = self.query_result
             self.logger.info("Data shown to stdout")
             if isinstance(res, None | str):
@@ -276,43 +254,7 @@ class App:
         This is the entry point. It parses the command line, creates the
         instance and call it.
         """
-        p = argparse.ArgumentParser(
-            description=DESCRIPTION,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        )
-        p.add_argument(
-            "--version", action="version", version=f"%(prog)s {__version__}"
-        )
-        p.add_argument(
-            "-a",
-            "--apicall",
-            default=_DEFAULT_ENTRYPOINT,
-            required=False,
-            help="the api call (the url after /app + query params if any)",
-        )
-        qv = p.add_mutually_exclusive_group()
-        qv.add_argument(
-            "-q",
-            "--quiet",
-            action="store_true",
-            default=False,
-            help="do now show log info",
-        )
-        qv.add_argument(
-            "-v",
-            "--verbose",
-            action="store_true",
-            default=False,
-            help="show log debug and detailed curl run",
-        )
-        p.add_argument(
-            "-s",
-            "--ssl",
-            action="store_true",
-            default=False,
-            help="ask curl to perform SSL revocation check",
-        )
-        cls(**vars(p.parse_args()))()
+        cls(**vars(cli.parse()))()
 
 
 if __name__ == "__main__":

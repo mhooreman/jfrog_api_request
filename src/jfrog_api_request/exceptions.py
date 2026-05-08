@@ -6,8 +6,18 @@ import typing
 
 if typing.TYPE_CHECKING:
     import logging
-    import pathlib
     import subprocess
+
+
+class MissedOperatingSystemCaseError(RuntimeError):
+    """Method called from an OS not implemented in the function.
+
+    This shows most probably a programming error.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the instance."""
+        super().__init__(platform.system())
 
 
 class _ExitCodes(enum.Enum):
@@ -151,34 +161,26 @@ class SystemRootNotSetError(_BaseProcessingError):
 
 
 class CurlNotFoundError(_BaseProcessingError):
-    """The curl binary expected path does not exist."""
+    """The curl binary path cannot be found."""
 
-    def __init__(self, path: pathlib.Path) -> None:
-        """Initialize the instance.
-
-        :param path: The path of the curl binary
-        """
-        self.path = path
+    def __init__(self) -> None:
+        """Initialize the instance."""
         super().__init__(
             exitcode=_ExitCodes.CURL_NOT_FOUND_ERROR,
-            log_msg="Curl executable file not found: %s",
-            log_args=[self.path]
+            log_msg="curl binary not found",
+            log_args=None
         )
 
 
 class PipConfigFileNotFoundError(_BaseProcessingError):
     """The pip system config file path does not exist."""
 
-    def __init__(self, path: pathlib.Path) -> None:
-        """Initialize the instance.
-
-        :param path: The path of the pip configuration file
-        """
-        self.path = path
+    def __init__(self) -> None:
+        """Initialize the instance."""
         super().__init__(
             exitcode=_ExitCodes.PIP_CONFIG_FILE_NOT_FOUND,
-            log_msg="Pip configuration file not found: %s",
-            log_args=[self.path]
+            log_msg="Pip configuration file not found",
+            log_args=None
         )
 
 

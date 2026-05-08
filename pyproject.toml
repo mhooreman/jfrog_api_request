@@ -1,0 +1,181 @@
+[project]
+name = "jfrog-api-request"
+version = "0.0.0"
+description = "Command line tool to run a JFrog API request"
+readme = "README.md"
+authors = [
+    { name = "Michaël Hooreman", email = "mhooreman@icloud.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+classifiers = [
+    "Private :: Do Not Upload",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Natural Language :: English",
+    # "Operating System :: OS Independent",
+    "Operating System :: Windows",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
+
+[project.scripts]
+jfrog-api-request = "jfrog_api_request:main"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "coverage>=7.13.5",
+    "mypy>=2.0.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.12",
+]
+
+[tool.ruff]
+line-length = 79  # pep8
+preview = true  # Needed if you want to evable CPY DOC and/or FAST
+include = ["pyproject.toml", "devtool.py", "src/**/*.py", "tests/**/*.py"]
+
+[tool.ruff.lint.per-file-ignores]
+'tests/*' = [
+    'S101',  # Pytest uses assert
+    'ANN',  # Not needed to annotate
+    'F811',  # Fixtures not compatible with that
+    'F401',  # Fixtures not compatible with that
+    'D',   # No need to document test api
+]
+
+[tool.ruff.lint]
+dummy-variable-rgx = "^_$"  #  Only ignore variables named "_"
+task-tags = ["TODO", ]  # XXX and FIXME are discouraged by some rules
+select = [
+    "N",       # pep8-naming
+    "D",       # pydocstyle
+    "F",       # Pyflakes
+    "E",       # E/W pycodestyle
+    "W",       # E/W pycodestyle
+    "C90",     # mccabe
+    "I",       # isort
+    "UP",      # pyupgrade
+    "YTT",     # flake8-2020
+    "ANN",     # flake8-annotations
+    "ASYNC",   # flake8-async
+    "S",       # flake8-bandit
+    "BLE",     # flake8-blind-except
+    "FBT",     # flake8-boolean-trap
+    "B",       # flake8-bugbear
+    "A",       # flake8-builtins
+    "COM",     # flake8-commas
+    "C4",      # flake8-comprehensions
+    "DTZ",     # flake8-datetimez
+    "T10",     # flake8-debugger
+    "DJ",      # flake8-django
+    "EM",      # flake8-errmsg
+    "EXE",     # flake8-executable
+    "FA",      # flake8-future-annotations
+    "ISC",     # flake8-implicit-str-concat
+    "ICN",     # flake8-import-conventions
+    "LOG",     # flake8-logging
+    "G",       # flake8-logging-format
+    "INP",     # flake8-no-pep420
+    "PIE",     # flake8-pie
+    "T20",     # flake8-print
+    "PYI",     # flake8-pyi
+    "PT",      # flake8-pytest-style
+    "Q",       # flake8-quotes
+    "RSE",     # flake8-raise
+    "RET",     # flake8-return
+    "SLF",     # flake8-self
+    "SLOT",    # flake8-slots
+    "SIM",     # flake8-simplify
+    "TID",     # flake8-tidy-imports
+    "TCH",     # flake8-type-checking
+    "INT",     # flake8-gettext
+    "ARG",     # flake8-unused-arguments
+    "PTH",     # flake8-use-pathlib
+    "TD",      # flake8-todos
+    "FIX",     # flake8-fixme
+    "ERA",     # eradicate
+    "PD",      # pandas-vet
+    "PGH",     # pygrep-hooks
+    "PL",      # Pylint
+    "TRY",     # tryceratops
+    "FLY",     # flynt
+    "NPY",     # NumPy-specific rules
+    "AIR",     # Airflow
+    "PERF",    # Perflint
+    "FURB",    # refurb
+    "RUF",     # Ruff-specific rules
+    "CPY",     # flake8-copyright - only in preview mode
+    "FAST",    # FastAPI - only in preview mode
+    "DOC",     # pydoclint - only in preview mode
+]
+ignore = [
+    # Too much for some cases
+    "DOC201",
+    
+    # False positive because of standard library replacement
+    "S413",    # replaced pycrpyto by pycryptodome
+    
+    # Those ones makes conflict
+    "D203",    # We prefer D211
+    "D213",    # We prefer D212
+    "COM812",  #
+    "ISC001",  #
+    
+    # Disabled as it doesn't agree with mypy
+    "UP040",   # `TypeAlias` annotation not yet supported by mypy
+    
+    # We don't agree
+    "D416",    # Since we use underlining for sections, we don't want column
+    "PD010",   # Replace unstack by pivot_table
+    "CPY001",  # No copyright at the beginning of a file
+    "DTZ005",  # Missing time zone info when reading time
+    "DTZ011",  # datetime.date.today() used
+    "PD002",   # Pandas inplace should be avoided. I don't agree.
+    "FURB180", # Accept metaclass=abc.ABCMeta, we consider it as good idea.
+    
+    # No issue tracking system, so no refernce in the TODO marks
+    "TD002",
+    "TD003",
+    "TD004",
+    "TD005",
+]
+
+[tool.mypy]
+strict = true
+show_error_context = true
+show_column_numbers = true
+show_error_end = true
+show_error_code_links = true
+pretty = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR/src $MYPY_CONFIG_FILE_DIR/tests"
+packages = ["qadt", "tests", "devtool"]
+
+[tool.pytest.ini_options]
+console_output_style = "classic"
+log_auto_indent = true
+log_cli = true
+pythonpath = ["src", ]
+required_plugins = []
+testpaths = ["tests", ]
+addopts = "--cov"
+
+[tool.coverage.run]
+branch = true
+omit = ["tests/*", ]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if TYPE_CHECKING:",
+]
+format = "text"
+show_missing = true

@@ -1,6 +1,6 @@
 [project]
 name = "jfrog-api-request"
-version = "0.0.0"
+version = "0.1.0"
 description = "Command line tool to run a JFrog API request"
 readme = "README.md"
 authors = [
@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 [project.scripts]
-jfrog-api-request = "jfrog_api_request:main"
+jfrog-api-request = "jfrog_api_request:app.App.main"
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]
@@ -120,6 +120,9 @@ select = [
 ignore = [
     # Too much for some cases
     "DOC201",
+
+    # Not compatible with sphinx docstrings
+    "DOC501",
     
     # False positive because of standard library replacement
     "S413",    # replaced pycrpyto by pycryptodome

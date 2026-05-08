@@ -207,12 +207,12 @@ class CurlCommandProcessor:
         if err:
             self.logger.debug(
                 "Curl execution standard error content:\n%s",
-                self._remove_empty_lines(self.raw_stderr, prefix="    "),
+                self._remove_empty_lines(err, prefix="    "),
             )
         if cp.returncode:
             cpe = subprocess.CalledProcessError(
                 cp.returncode, self.cmdline,
-                output=self.raw_stdout, stderr=self.raw_stderr
+                output=out, stderr=err
             )
             raise ProblemWhileRunningCurlError(cpe)
 
